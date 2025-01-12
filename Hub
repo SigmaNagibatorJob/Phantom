@@ -107,6 +107,10 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+local Tabs = {
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+}
+
 local AntiFlingToggle = Tabs.Settings:AddToggle("AntiFling", { Title = "Anti Fling", Default = false })
 local AntiFlingEnabled = false
 
@@ -115,113 +119,55 @@ AntiFlingToggle:OnChanged(function(Value)
     print("AntiFling toggled:", Value)
 end)
 
--- Функция нейтрализации скорости
-local function NeutralizeVelocity(Part)
-    if Part:IsA("BasePart") then
-        Part.AssemblyAngularVelocity = Vector3.zero
-        Part.AssemblyLinearVelocity = Vector3.zero
-        Part.CanCollide = false
-        Part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0)
+-- Функция безопасного обнуления скорости
+local function SafeNeutralizeVelocity(part)
+    if part:IsA("BasePart") then
+        part.AssemblyAngularVelocity = Vector3.zero
+        part.AssemblyLinearVelocity = Vector3.zero
+        part.CanCollide = false
+        part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
     end
 end
 
-local Services = setmetatable({}, {
-    __index = function(Self, Index)
-        local NewService = game:GetService(Index)
-        if NewService then Self[Index] = NewService end
-        return NewService
-    end
-})
+-- Мониторинг персонажа игрока
+local function MonitorLocalPlayer()
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local LocalPlayer = Players.LocalPlayer
 
-local LocalPlayer = Services.Players.LocalPlayer
-local LastPosition = nil
+    local function onCharacterAdded(character)
+        local PrimaryPart = character:WaitForChild("HumanoidRootPart", 5)
+        local LastSafePosition = nil
 
--- Мониторинг Fling
-local function MonitorPlayer(Player)
-    local PrimaryPart
+        RunService.Heartbeat:Connect(function()
+            if not AntiFlingEnabled or not PrimaryPart then return end
 
-    local function CharacterAdded(Character)
-        repeat wait() until Character:FindFirstChild("HumanoidRootPart")
-        PrimaryPart = Character:FindFirstChild("HumanoidRootPart")
-    end
+            -- Проверка на аномально высокую скорость
+            if PrimaryPart.AssemblyLinearVelocity.Magnitude > 150 or PrimaryPart.AssemblyAngularVelocity.Magnitude > 150 then
+                SafeNeutralizeVelocity(PrimaryPart)
 
-    CharacterAdded(Player.Character or Player.CharacterAdded:Wait())
-    Player.CharacterAdded:Connect(CharacterAdded)
+                -- Восстановление безопасной позиции
+                if LastSafePosition then
+                    PrimaryPart.CFrame = LastSafePosition
+                end
 
-    Services.RunService.Heartbeat:Connect(function()
-        if not AntiFlingEnabled or not PrimaryPart then return end
-
-        if PrimaryPart.AssemblyLinearVelocity.Magnitude > 100 or PrimaryPart.AssemblyAngularVelocity.Magnitude > 50 then
-            game.StarterGui:SetCore("ChatMakeSystemMessage", {
-                Text = "Fling Exploit detected, Player: " .. Player.Name;
-                Color = Color3.fromRGB(255, 200, 0);
-            })
-
-            for _, Part in ipairs(Player.Character:GetDescendants()) do
-                NeutralizeVelocity(Part)
+                -- Вывод сообщения в системный чат
+                game.StarterGui:SetCore("ChatMakeSystemMessage", {
+                    Text = "Excessive velocity detected! Stabilizing...",
+                    Color = Color3.fromRGB(255, 0, 0),
+                })
+            else
+                LastSafePosition = PrimaryPart.CFrame
             end
-        end
-    end)
-end
+        end)
+    end
 
--- Мониторинг для всех игроков
-for _, Player in ipairs(Services.Players:GetPlayers()) do
-    if Player ~= LocalPlayer then
-        MonitorPlayer(Player)
+    -- Подключение обработчика к событиям
+    LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
+    if LocalPlayer.Character then
+        onCharacterAdded(LocalPlayer.Character)
     end
 end
 
-Services.Players.PlayerAdded:Connect(MonitorPlayer)
-
--- Мониторинг локального игрока
-Services.RunService.Heartbeat:Connect(function()
-    if not AntiFlingEnabled then return end
-
-    local Character = LocalPlayer.Character
-    local PrimaryPart = Character and Character:FindFirstChild("HumanoidRootPart")
-
-    if PrimaryPart then
-        if PrimaryPart.AssemblyLinearVelocity.Magnitude > 250 or PrimaryPart.AssemblyAngularVelocity.Magnitude > 250 then
-            NeutralizeVelocity(PrimaryPart)
-            if LastPosition then
-                PrimaryPart.CFrame = LastPosition
-            end
-            game.StarterGui:SetCore("ChatMakeSystemMessage", {
-                Text = "You were flung. Neutralizing velocity.";
-                Color = Color3.fromRGB(255, 0, 0);
-            })
-        else
-            LastPosition = PrimaryPart.CFrame
-        end
-    end
-end)
-
-local Toggle = Tabs.Settings:AddToggle("AntiAFK", {Title = "AntiAFK", Default = true})
-
-Toggle:OnChanged(function()
-    _G.AutoFarm = Toggle.Value
-    print("Auto Farm toggled:", Toggle.Value)
-end)
-
--- Постоянный AFK скрипт для Roblox, который работает после смерти персонажа
-
-local player = game.Players.LocalPlayer
-
--- Функция для выполнения AFK действий
-local function stayAFK()
-    while true do
-        wait(300)  -- каждые 5 минут
-        game:GetService("VirtualUser"):CaptureController()
-        game:GetService("VirtualUser"):ClickButton2(Vector2.new())
-    end
-end
-
--- Проверка на респаун персонажа
-player.CharacterAdded:Connect(function(character)
-    stayAFK()  -- Запускаем функцию после каждого возрождения
-end)
-
--- Запускаем сразу, если персонаж уже существует
-if player.Character then
-    stayAFK()
-end
+-- Активация функции антиоткидывания
+MonitorLocalPlayer()
