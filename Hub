@@ -1,0 +1,227 @@
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+local Window = Fluent:CreateWindow({
+    Title = "Phantom Hub " .. Fluent.Version,
+    SubTitle = "by cakein228",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true, -- The blur may be detectable, setting this to false disables blur entirely
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl -- Used when theres no MinimizeKeybind
+})
+
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+}
+
+local Toggle = Tabs.Main:AddToggle("AutoFarm", {Title = "Auto Farm", Default = false })
+
+Toggle:OnChanged(function()
+    _G.AutoFarm = Toggle.Value
+    print("Auto Farm toggled:", Toggle.Value)
+end)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local workspace = game:GetService("Workspace")
+
+_G.AutoFarm = false
+_G.Speed = 23
+
+local movingToCoin, currentCoin = false, nil
+local coinStartTime = nil
+
+local function isCharacterValid()
+    return LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+end
+
+local function hasValidCoinVisual(coin)
+    local coinVisual = coin:FindFirstChild("CoinVisual")
+    return coinVisual and coinVisual.Transparency == 0
+end
+
+local function getNearestCoin()
+    local nearest, minDist = nil, math.huge
+    for _, coin in ipairs(workspace:GetDescendants()) do
+        if coin.Name == "Coin_Server" and coin:IsA("Part") and hasValidCoinVisual(coin) then 
+            local dist = (coin.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if dist < minDist then
+                nearest, minDist = coin, dist
+            end
+        end
+    end
+    return nearest
+end
+
+local function teleportToCoin(coin)
+    if not isCharacterValid() then return end
+    LocalPlayer.Character.HumanoidRootPart.CFrame = coin.CFrame
+end
+
+local function moveToCoin(coin)
+    if not isCharacterValid() then return end
+    local rootPart = LocalPlayer.Character.HumanoidRootPart
+    local distance = (coin.Position - rootPart.Position).Magnitude
+
+    if distance > 250 then
+        teleportToCoin(coin)
+        movingToCoin = false
+        return
+    end
+
+    if not hasValidCoinVisual(coin) then
+        movingToCoin = false
+        return
+    end
+
+    if os.clock() - coinStartTime > 10 then
+        teleportToCoin(coin)
+        movingToCoin = false
+        return
+    end
+
+    local direction = (coin.Position - rootPart.Position).unit
+    if distance > 3 then
+        rootPart.CFrame = CFrame.new(rootPart.Position, coin.Position) * CFrame.Angles(math.rad(90), 0, 0)
+        rootPart.CFrame = rootPart.CFrame + direction * _G.Speed * RunService.Heartbeat:Wait()
+    else
+        movingToCoin = false
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if not _G.AutoFarm or not isCharacterValid() then return end
+
+    if not movingToCoin then
+        currentCoin = getNearestCoin()
+        if currentCoin then
+            movingToCoin = true
+            coinStartTime = os.clock()
+        end
+    elseif currentCoin then
+        moveToCoin(currentCoin)
+    end
+end)
+
+local AntiFlingToggle = Tabs.Settings:AddToggle("AntiFling", { Title = "Anti Fling", Default = false })
+local AntiFlingEnabled = false
+
+AntiFlingToggle:OnChanged(function(Value)
+    AntiFlingEnabled = Value
+    print("AntiFling toggled:", Value)
+end)
+
+-- Функция нейтрализации скорости
+local function NeutralizeVelocity(Part)
+    if Part:IsA("BasePart") then
+        Part.AssemblyAngularVelocity = Vector3.zero
+        Part.AssemblyLinearVelocity = Vector3.zero
+        Part.CanCollide = false
+        Part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0)
+    end
+end
+
+local Services = setmetatable({}, {
+    __index = function(Self, Index)
+        local NewService = game:GetService(Index)
+        if NewService then Self[Index] = NewService end
+        return NewService
+    end
+})
+
+local LocalPlayer = Services.Players.LocalPlayer
+local LastPosition = nil
+
+-- Мониторинг Fling
+local function MonitorPlayer(Player)
+    local PrimaryPart
+
+    local function CharacterAdded(Character)
+        repeat wait() until Character:FindFirstChild("HumanoidRootPart")
+        PrimaryPart = Character:FindFirstChild("HumanoidRootPart")
+    end
+
+    CharacterAdded(Player.Character or Player.CharacterAdded:Wait())
+    Player.CharacterAdded:Connect(CharacterAdded)
+
+    Services.RunService.Heartbeat:Connect(function()
+        if not AntiFlingEnabled or not PrimaryPart then return end
+
+        if PrimaryPart.AssemblyLinearVelocity.Magnitude > 100 or PrimaryPart.AssemblyAngularVelocity.Magnitude > 50 then
+            game.StarterGui:SetCore("ChatMakeSystemMessage", {
+                Text = "Fling Exploit detected, Player: " .. Player.Name;
+                Color = Color3.fromRGB(255, 200, 0);
+            })
+
+            for _, Part in ipairs(Player.Character:GetDescendants()) do
+                NeutralizeVelocity(Part)
+            end
+        end
+    end)
+end
+
+-- Мониторинг для всех игроков
+for _, Player in ipairs(Services.Players:GetPlayers()) do
+    if Player ~= LocalPlayer then
+        MonitorPlayer(Player)
+    end
+end
+
+Services.Players.PlayerAdded:Connect(MonitorPlayer)
+
+-- Мониторинг локального игрока
+Services.RunService.Heartbeat:Connect(function()
+    if not AntiFlingEnabled then return end
+
+    local Character = LocalPlayer.Character
+    local PrimaryPart = Character and Character:FindFirstChild("HumanoidRootPart")
+
+    if PrimaryPart then
+        if PrimaryPart.AssemblyLinearVelocity.Magnitude > 250 or PrimaryPart.AssemblyAngularVelocity.Magnitude > 250 then
+            NeutralizeVelocity(PrimaryPart)
+            if LastPosition then
+                PrimaryPart.CFrame = LastPosition
+            end
+            game.StarterGui:SetCore("ChatMakeSystemMessage", {
+                Text = "You were flung. Neutralizing velocity.";
+                Color = Color3.fromRGB(255, 0, 0);
+            })
+        else
+            LastPosition = PrimaryPart.CFrame
+        end
+    end
+end)
+
+local Toggle = Tabs.Settings:AddToggle("AntiAFK", {Title = "AntiAFK", Default = true})
+
+Toggle:OnChanged(function()
+    _G.AutoFarm = Toggle.Value
+    print("Auto Farm toggled:", Toggle.Value)
+end)
+
+-- Постоянный AFK скрипт для Roblox, который работает после смерти персонажа
+
+local player = game.Players.LocalPlayer
+
+-- Функция для выполнения AFK действий
+local function stayAFK()
+    while true do
+        wait(300)  -- каждые 5 минут
+        game:GetService("VirtualUser"):CaptureController()
+        game:GetService("VirtualUser"):ClickButton2(Vector2.new())
+    end
+end
+
+-- Проверка на респаун персонажа
+player.CharacterAdded:Connect(function(character)
+    stayAFK()  -- Запускаем функцию после каждого возрождения
+end)
+
+-- Запускаем сразу, если персонаж уже существует
+if player.Character then
+    stayAFK()
+end
