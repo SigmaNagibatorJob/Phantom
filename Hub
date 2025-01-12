@@ -107,10 +107,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-local Tabs = {
-    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
-}
-
 local AntiFlingToggle = Tabs.Settings:AddToggle("AntiFling", { Title = "Anti Fling", Default = false })
 local AntiFlingEnabled = false
 
