@@ -199,27 +199,15 @@ Toggle:OnChanged(function()
     end
 end)
 
+Добавляем кнопку на вкладку Main
 Tabs.SoonMore:AddButton({
-        Title = "Button",
-        Description = "Very important button",
-        Callback = function()
-            Window:Dialog({
-                Title = "Title",
-                Content = "This is a dialog",
-                Buttons = {
-                    {
-                        Title = "Confirm",
-                        Callback = function()
-                            print("Confirmed the dialog.")
-                        end
-                    },
-                    {
-                        Title = "Cancel",
-                        Callback = function()
-                            print("Cancelled the dialog.")
-                        end
-                    }
-                }
-            })
-        end
-    })
+    Title = "Soon More",
+    Callback = function()
+        Fluent:Notify({
+            Title = "Soon",
+            Content = "Soon More function and game!😄",
+            Duration = 5, -- Длительность в секундах
+            Type = "Info" -- Тип уведомления: "Info", "Warning", "Error", "Success"
+        })
+    end
+})
