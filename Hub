@@ -198,3 +198,16 @@ Toggle:OnChanged(function()
         print("Auto AFK disabled")
     end
 end)
+
+Добавляем кнопку на вкладку Main
+Tabs.SoonMore:AddButton({
+    Title = "Soon More",
+    Callback = function()
+        Fluent:Notify({
+            Title = "Soon",
+            Content = "Soon More function and game!😄",
+            Duration = 5, -- Длительность в секундах
+            Type = "Info" -- Тип уведомления: "Info", "Warning", "Error", "Success"
+        })
+    end
+})
