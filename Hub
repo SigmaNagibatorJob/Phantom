@@ -15,7 +15,7 @@ local Window = Fluent:CreateWindow({
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" }),
-    Soon = Window:AddTab({ Title = "Soon more", Icon = "Exclamatory" })
+    SoonMore = Window:AddTab({ Title = "Soon more", Icon = "Exclamatory" })
 }
 
 local Toggle = Tabs.Main:AddToggle("AutoFarm", {Title = "Auto Farm", Default = false })
@@ -199,7 +199,7 @@ Toggle:OnChanged(function()
     end
 end)
 
-Tabs.Soon:AddButton({
+Tabs.SoonMore:AddButton({
         Title = "Button",
         Description = "Very important button",
         Callback = function()
