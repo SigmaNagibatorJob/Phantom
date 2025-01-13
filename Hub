@@ -167,3 +167,33 @@ end
 
 -- Активация функции антиоткидывания
 MonitorLocalPlayer()
+
+-- Toggle for enabling AFK mode
+local Toggle = Tabs.Settings:AddToggle("AutoAFK", {Title = "Enable Auto AFK", Default = false})
+
+Toggle:OnChanged(function()
+    if Toggle.Value then
+        -- Запускаем авто-AFK скрипт, если переключатель включен
+        local player = game.Players.LocalPlayer
+
+        local function stayAFK()
+            while true do
+                wait(300)  -- каждые 5 минут
+                game:GetService("VirtualUser"):CaptureController()
+                game:GetService("VirtualUser"):ClickButton2(Vector2.new())
+            end
+        end
+
+        -- Проверка на респаун персонажа
+        player.CharacterAdded:Connect(function(character)
+            stayAFK()  -- Запускаем функцию после каждого возрождения
+        end)
+
+        -- Запускаем сразу, если персонаж уже существует
+        if player.Character then
+            stayAFK()
+        end
+    else
+        print("Auto AFK disabled")
+    end
+end)
