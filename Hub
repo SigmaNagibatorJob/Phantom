@@ -199,13 +199,12 @@ Toggle:OnChanged(function()
     end
 end)
 
-Добавляем кнопку на вкладку Main
-Tabs.Soon:AddButton({
-    Title = "Soon More",
+Tabs.Main:AddButton({
+    Title = "Показать уведомление",
     Callback = function()
         Fluent:Notify({
-            Title = "Soon",
-            Content = "Soon More function and game!😄",
+            Title = "Уведомление",
+            Content = "Это уведомление из Phantom Hub!",
             Duration = 5, -- Длительность в секундах
             Type = "Info" -- Тип уведомления: "Info", "Warning", "Error", "Success"
         })
