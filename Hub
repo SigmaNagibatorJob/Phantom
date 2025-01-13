@@ -107,7 +107,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-local AntiFlingToggle = Tabs.Settings:AddToggle("AntiFling", { Title = "Anti Fling", Default = false })
+local AntiFlingToggle = Tabs.Settings:AddToggle("AntiFling", { Title = "Anti Fling", Default = true})
 local AntiFlingEnabled = false
 
 AntiFlingToggle:OnChanged(function(Value)
@@ -169,7 +169,7 @@ end
 MonitorLocalPlayer()
 
 -- Toggle for enabling AFK mode
-local Toggle = Tabs.Settings:AddToggle("AutoAFK", {Title = "Enable Auto AFK", Default = false})
+local Toggle = Tabs.Settings:AddToggle("AutoAFK", {Title = "Enable Auto AFK", Default = true})
 
 Toggle:OnChanged(function()
     if Toggle.Value then
