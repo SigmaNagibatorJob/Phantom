@@ -212,6 +212,6 @@ Tabs.Soon:AddButton({
 })
 
 Tabs.Soon:AddParagraph({
-        Title = "Paragraph",
-        Content = "This is a paragraph.\nSecond line!"
+        Title = "Soon",
+        Content = "Soon More function and game!"
     })
