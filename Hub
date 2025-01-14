@@ -210,3 +210,8 @@ Tabs.Soon:AddButton({
         })
     end
 })
+
+Tabs.Soon:AddParagraph({
+        Title = "Paragraph",
+        Content = "This is a paragraph.\nSecond line!"
+    })
