@@ -1,217 +1,176 @@
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
-local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+-- Загрузка библиотек
+local FluentUI = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveSys = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local UIManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
-local Window = Fluent:CreateWindow({
-    Title = "Phantom Hub " .. Fluent.Version,
-    SubTitle = "by cakein228",
-    TabWidth = 160,
-    Size = UDim2.fromOffset(580, 460),
-    Acrylic = true, -- The blur may be detectable, setting this to false disables blur entirely
+-- Создание главного окна
+local MainWindow = FluentUI:CreateWindow({
+    Title = "Phantom System " .. FluentUI.Version,
+    SubTitle = "Reimagined by cakein228",
+    TabWidth = 170,
+    Size = UDim2.fromOffset(600, 480),
+    Acrylic = false, 
     Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl -- Used when theres no MinimizeKeybind
+    MinimizeKey = Enum.KeyCode.LeftAlt 
 })
 
-local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "" }),
-    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" }),
-    Soon = Window:AddTab({ Title = "Soon More", Icon = "Sing" })
+-- Добавление вкладок
+local Sections = {
+    Dashboard = MainWindow:AddTab({ Title = "Dashboard" }),
+    Config = MainWindow:AddTab({ Title = "Configuration" }),
+    Updates = MainWindow:AddTab({ Title = "Upcoming Features" })
 }
 
-local Toggle = Tabs.Main:AddToggle("AutoFarm", {Title = "Auto Farm", Default = false })
+-- Переключатель для автофарма
+local AutoFarmToggle = Sections.Dashboard:AddToggle("AutoCollect", { Title = "Enable Auto Collect", Default = false })
 
-Toggle:OnChanged(function()
-    _G.AutoFarm = Toggle.Value
-    print("Auto Farm toggled:", Toggle.Value)
+AutoFarmToggle:OnChanged(function()
+    _G.Collecting = AutoFarmToggle.Value
+    print("Auto Collect status:", AutoFarmToggle.Value)
 end)
 
-local Players = game:GetService("Players")
+-- Глобальные переменные
+_G.Collecting = false
+_G.MoveSpeed = 20
+
+local activeCoin, isMoving = nil, false
+local coinStartTimestamp = nil
+
+local PlayersService = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-local workspace = game:GetService("Workspace")
+local Player = PlayersService.LocalPlayer
+local GameWorkspace = game:GetService("Workspace")
 
-_G.AutoFarm = false
-_G.Speed = 23
-
-local movingToCoin, currentCoin = false, nil
-local coinStartTime = nil
-
-local function isCharacterValid()
-    return LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+-- Проверка состояния персонажа
+local function validateCharacter()
+    return Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
 end
 
-local function hasValidCoinVisual(coin)
-    local coinVisual = coin:FindFirstChild("CoinVisual")
-    return coinVisual and coinVisual.Transparency == 0
+-- Проверка монет
+local function checkCoinAppearance(coin)
+    local visual = coin:FindFirstChild("CoinVisual")
+    return visual and visual.Transparency == 0
 end
 
-local function getNearestCoin()
-    local nearest, minDist = nil, math.huge
-    for _, coin in ipairs(workspace:GetDescendants()) do
-        if coin.Name == "Coin_Server" and coin:IsA("Part") and hasValidCoinVisual(coin) then 
-            local dist = (coin.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-            if dist < minDist then
-                nearest, minDist = coin, dist
+-- Поиск ближайшей монеты
+local function locateClosestCoin()
+    local closest, minDistance = nil, math.huge
+    for _, coin in ipairs(GameWorkspace:GetDescendants()) do
+        if coin.Name == "Coin_Server" and coin:IsA("Part") and checkCoinAppearance(coin) then 
+            local distance = (coin.Position - Player.Character.HumanoidRootPart.Position).Magnitude
+            if distance < minDistance then
+                closest, minDistance = coin, distance
             end
         end
     end
-    return nearest
+    return closest
 end
 
-local function teleportToCoin(coin)
-    if not isCharacterValid() then return end
-    LocalPlayer.Character.HumanoidRootPart.CFrame = coin.CFrame
+-- Телепортация к монете
+local function warpToCoin(coin)
+    if not validateCharacter() then return end
+    Player.Character.HumanoidRootPart.CFrame = coin.CFrame
 end
 
-local function moveToCoin(coin)
-    if not isCharacterValid() then return end
-    local rootPart = LocalPlayer.Character.HumanoidRootPart
-    local distance = (coin.Position - rootPart.Position).Magnitude
+-- Движение к монете
+local function navigateToCoin(coin)
+    if not validateCharacter() then return end
+    local root = Player.Character.HumanoidRootPart
+    local gap = (coin.Position - root.Position).Magnitude
 
-    if distance > 250 then
-        teleportToCoin(coin)
-        movingToCoin = false
+    if gap > 250 then
+        warpToCoin(coin)
+        isMoving = false
         return
     end
 
-    if not hasValidCoinVisual(coin) then
-        movingToCoin = false
+    if not checkCoinAppearance(coin) then
+        isMoving = false
         return
     end
 
-    if os.clock() - coinStartTime > 10 then
-        teleportToCoin(coin)
-        movingToCoin = false
+    if os.clock() - coinStartTimestamp > 10 then
+        warpToCoin(coin)
+        isMoving = false
         return
     end
 
-    local direction = (coin.Position - rootPart.Position).unit
-    if distance > 3 then
-        rootPart.CFrame = CFrame.new(rootPart.Position, coin.Position) * CFrame.Angles(math.rad(90), 0, 0)
-        rootPart.CFrame = rootPart.CFrame + direction * _G.Speed * RunService.Heartbeat:Wait()
+    local direction = (coin.Position - root.Position).unit
+    if gap > 0 then
+        root.CFrame = CFrame.new(root.Position, coin.Position)
+        root.CFrame = root.CFrame + direction * _G.MoveSpeed * RunService.Heartbeat:Wait()
     else
-        movingToCoin = false
+        isMoving = false
     end
 end
 
+-- Логика автофарма
 RunService.Heartbeat:Connect(function()
-    if not _G.AutoFarm or not isCharacterValid() then return end
+    if not _G.Collecting or not validateCharacter() then return end
 
-    if not movingToCoin then
-        currentCoin = getNearestCoin()
-        if currentCoin then
-            movingToCoin = true
-            coinStartTime = os.clock()
+    if not isMoving then
+        activeCoin = locateClosestCoin()
+        if activeCoin then
+            isMoving = true
+            coinStartTimestamp = os.clock()
         end
-    elseif currentCoin then
-        moveToCoin(currentCoin)
+    elseif activeCoin then
+        navigateToCoin(activeCoin)
     end
 end)
 
-local AntiFlingToggle = Tabs.Settings:AddToggle("AntiFling", { Title = "Anti Fling", Default = true})
-local AntiFlingEnabled = false
+-- Антифлинг-система
+local AntiFlingToggle = Sections.Config:AddToggle("AntiFlingProtection", { Title = "Anti Fling Protection", Default = true })
+local AntiFlingActive = false
 
-AntiFlingToggle:OnChanged(function(Value)
-    AntiFlingEnabled = Value
-    print("AntiFling toggled:", Value)
+AntiFlingToggle:OnChanged(function(state)
+    AntiFlingActive = state
+    print("Anti Fling state:", state)
 end)
 
--- Функция безопасного обнуления скорости
-local function SafeNeutralizeVelocity(part)
+-- Безопасное обнуление скорости
+local function resetVelocity(part)
     if part:IsA("BasePart") then
         part.AssemblyAngularVelocity = Vector3.zero
         part.AssemblyLinearVelocity = Vector3.zero
         part.CanCollide = false
-        part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
     end
 end
 
--- Мониторинг персонажа игрока
-local function MonitorLocalPlayer()
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local LocalPlayer = Players.LocalPlayer
-
-    local function onCharacterAdded(character)
-        local PrimaryPart = character:WaitForChild("HumanoidRootPart", 5)
-        local LastSafePosition = nil
+-- Мониторинг игрока
+local function monitorPlayer()
+    local function onCharacterSpawn(character)
+        local mainPart = character:WaitForChild("HumanoidRootPart", 5)
+        local lastSafePosition = nil
 
         RunService.Heartbeat:Connect(function()
-            if not AntiFlingEnabled or not PrimaryPart then return end
+            if not AntiFlingActive or not mainPart then return end
 
-            -- Проверка на аномально высокую скорость
-            if PrimaryPart.AssemblyLinearVelocity.Magnitude > 150 or PrimaryPart.AssemblyAngularVelocity.Magnitude > 150 then
-                SafeNeutralizeVelocity(PrimaryPart)
-
-                -- Восстановление безопасной позиции
-                if LastSafePosition then
-                    PrimaryPart.CFrame = LastSafePosition
+            if mainPart.AssemblyLinearVelocity.Magnitude > 200 then
+                resetVelocity(mainPart)
+                if lastSafePosition then
+                    mainPart.CFrame = lastSafePosition
                 end
-
-                -- Вывод сообщения в системный чат
                 game.StarterGui:SetCore("ChatMakeSystemMessage", {
-                    Text = "Excessive velocity detected! Stabilizing...",
-                    Color = Color3.fromRGB(255, 0, 0),
+                    Text = "Unusual movement detected! Stabilizing...",
+                    Color = Color3.fromRGB(255, 50, 50),
                 })
             else
-                LastSafePosition = PrimaryPart.CFrame
+                lastSafePosition = mainPart.CFrame
             end
         end)
     end
 
-    -- Подключение обработчика к событиям
-    LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
-    if LocalPlayer.Character then
-        onCharacterAdded(LocalPlayer.Character)
+    Player.CharacterAdded:Connect(onCharacterSpawn)
+    if Player.Character then
+        onCharacterSpawn(Player.Character)
     end
 end
 
--- Активация функции антиоткидывания
-MonitorLocalPlayer()
+monitorPlayer()
 
--- Toggle for enabling AFK mode
-local Toggle = Tabs.Settings:AddToggle("AutoAFK", {Title = "Enable Auto AFK", Default = true})
-
-Toggle:OnChanged(function()
-    if Toggle.Value then
-        -- Запускаем авто-AFK скрипт, если переключатель включен
-        local player = game.Players.LocalPlayer
-
-        local function stayAFK()
-            while true do
-                wait(300)  -- каждые 5 минут
-                game:GetService("VirtualUser"):CaptureController()
-                game:GetService("VirtualUser"):ClickButton2(Vector2.new())
-            end
-        end
-
-        -- Проверка на респаун персонажа
-        player.CharacterAdded:Connect(function(character)
-            stayAFK()  -- Запускаем функцию после каждого возрождения
-        end)
-
-        -- Запускаем сразу, если персонаж уже существует
-        if player.Character then
-            stayAFK()
-        end
-    else
-        print("Auto AFK disabled")
-    end
-end)
-
-Tabs.Soon:AddButton({
-    Title = "Показать уведомление",
-    Callback = function()
-        Fluent:Notify({
-            Title = "Уведомление",
-            Content = "Это уведомление из Phantom Hub!",
-            Duration = 5, -- Длительность в секундах
-            Type = "Info" -- Тип уведомления: "Info", "Warning", "Error", "Success"
-        })
-    end
+-- Добавление обновлений
+Sections.Updates:AddParagraph({
+    Title = "Coming Soon",
+    Content = "Stay tuned for future updates and features!"
 })
-
-Tabs.Soon:AddParagraph({
-        Title = "Soon",
-        Content = "Soon More function and game!"
-    })
