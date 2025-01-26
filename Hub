@@ -89,7 +89,7 @@ local function navigateToCoin(coin)
         return
     end
 
-    if os.clock() - coinStartTimestamp > 7 then
+    if os.clock() - coinStartTimestamp > 10 then
         warpToCoin(coin)
         isMoving = false
         return
