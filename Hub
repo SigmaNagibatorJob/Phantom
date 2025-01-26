@@ -1,4 +1,24 @@
--- Загрузка библиотек
+local player = game.Players.LocalPlayer
+
+-- Функция для выполнения AFK действий
+local function stayAFK()
+    while true do
+        wait(300)  -- каждые 5 минут
+        game:GetService("VirtualUser"):CaptureController()
+        game:GetService("VirtualUser"):ClickButton2(Vector2.new())
+    end
+end
+
+-- Проверка на респаун персонажа
+player.CharacterAdded:Connect(function(character)
+    stayAFK()  -- Запускаем функцию после каждого возрождения
+end)
+
+-- Запускаем сразу, если персонаж уже существует
+if player.Character then
+    stayAFK()
+end
+
 local FluentUI = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local SaveSys = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local UIManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
