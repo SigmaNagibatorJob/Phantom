@@ -31,7 +31,7 @@ end)
 
 -- Глобальные переменные
 _G.Collecting = false
-_G.MoveSpeed = 27
+_G.MoveSpeed = 50
 
 local activeCoin, isMoving = nil, false
 local coinStartTimestamp = nil
