@@ -255,6 +255,53 @@ end
 
 NoclipToggle:OnChanged(toggleNoclip)
 
+local SpeedSlider = Sections.Config:AddSlider("MoveSpeed", {
+    Title = "Movement Speed",
+    Min = 16,
+    Max = 100,
+    Default = 20,
+    Callback = function(value)
+        _G.MoveSpeed = value
+        print("Movement Speed set to:", value)
+    end
+})
+
+local JumpSlider = Sections.Config:AddSlider("JumpHeight", {
+    Title = "Jump Height",
+    Min = 50,
+    Max = 200,
+    Default = 100,
+    Callback = function(value)
+        _G.JumpHeight = value
+        print("Jump Height set to:", value)
+    end
+})
+
+local NoclipToggle = Sections.Config:AddToggle("NoclipToggle", {
+    Title = "Noclip", 
+    Default = false,
+    Callback = function(state)
+        toggleNoclip(state)
+    end
+})
+
+local noclipEnabled = false
+
+local function toggleNoclip(state)
+    noclipEnabled = state
+    while noclipEnabled do
+        local character = game.Players.LocalPlayer.Character
+        if character then
+            for _, part in pairs(character:GetChildren()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+        end
+        task.wait()
+    end
+end
+
 local PlayersService = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Player = PlayersService.LocalPlayer
@@ -331,6 +378,5 @@ end
 Player.CharacterAdded:Connect(function()
     applyJumpSpeed()
 end)
-
 -- Устанавливаем начальные значения
 applyJumpSpeed()
