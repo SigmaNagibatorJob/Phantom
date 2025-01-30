@@ -48,7 +48,7 @@ end
 -- Проверка монет
 local function checkCoinAppearance(coin)
     local visual = coin:FindFirstChild("CoinVisual")
-    return visual and visual.Transparency == 3
+    return visual and visual.Transparency == 0
 end
 
 -- Поиск ближайшей монеты
