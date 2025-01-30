@@ -192,12 +192,10 @@ Sections.Updates:AddParagraph({
     Content = "Stay tuned for future updates and features!"
 })
 
-local NoClipToggle = Sections.Config:AddToggle("NoClip", { Title = "Enable NoClip", Default = false })
+local NoclipToggle = Tabs.Main:AddToggle("NoclipToggle", { Title = "Noclip", Default = false })
 
-NoClipToggle:OnChanged(function()
-    NoClip = NoClipToggle.Value
-    print("NoClip status:", NoClipToggle.Value)
-end)
+NoclipToggle:OnChanged(function()
+    noclip = NoclipToggle.Value
 
 local RunService = game:GetService("RunService")
 local player = game.Players.LocalPlayer
