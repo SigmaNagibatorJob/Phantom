@@ -1,3 +1,25 @@
+local ScreenGui = Instance.new("ScreenGui")
+local Button = Instance.new("ImageButton") -- Используем ImageButton
+
+-- Настройка ScreenGui
+ScreenGui.Parent = game.CoreGui
+
+-- Настройка кнопки
+Button.Parent = ScreenGui
+Button.Size = UDim2.new(0, 50, 0, 50) -- Размер кнопки
+Button.Position = UDim2.new(0, 10, 0, -10) -- Позиция кнопки
+Button.BackgroundColor3 = Color3.new(1, 1, 1) -- Цвет фона кнопки
+Button.Image = "rbxassetid://127815828886309" -- Указываем ID вашей иконки
+Button.ScaleType = Enum.ScaleType.Fit -- Настройка масштаба изображения
+
+-- Функция нажатия
+Button.MouseButton1Click:Connect(function()
+    local VirtualInputManager = game:GetService("VirtualInputManager")
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, nil) -- Нажатие
+    task.wait(0.1) -- Задержка
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, nil) -- Отпускание
+end)
+
 local FluentUI = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local SaveSys = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local UIManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
