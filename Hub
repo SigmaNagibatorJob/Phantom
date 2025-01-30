@@ -216,3 +216,5 @@ end
 RunService.Stepped:Connect(function()
     noClip()
 end)
+
+Options.NoClipToggle:SetValue(false)
