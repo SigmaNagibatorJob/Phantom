@@ -195,10 +195,10 @@ Sections.Updates:AddParagraph({
 local NoClip = Tabs.Config:AddToggle("NoClip", {Title = "NoClip", Default = true })
 
     NoClip:OnChanged(function()
-        print("NoClip changed:", Options.NoClip.Value)
+        print("Toggle changed:", Options.Toggle.Value)
     end)
 
-    Options.NoClip:SetValue(false)
+    Options.MyToggle:SetValue(false)
 
 local RunService = game:GetService("RunService")
 local player = game.Players.LocalPlayer
