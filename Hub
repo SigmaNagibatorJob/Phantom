@@ -212,3 +212,125 @@ local function toggleNoclip(state)
 end
 
 NoclipToggle:OnChanged(toggleNoclip)
+
+local SpeedSlider = Sections.Config:AddSlider("MoveSpeed", {
+    Title = "Movement Speed",
+    Min = 16,
+    Max = 100,
+    Default = 20,
+    Callback = function(value)
+        _G.MoveSpeed = value
+        print("Movement Speed set to:", value)
+    end
+})
+
+local JumpSlider = Sections.Config:AddSlider("JumpHeight", {
+    Title = "Jump Height",
+    Min = 50,
+    Max = 200,
+    Default = 100,
+    Callback = function(value)
+        _G.JumpHeight = value
+        print("Jump Height set to:", value)
+    end
+})
+
+local NoclipToggle = Sections.Config:AddToggle("NoclipToggle", { Title = "Noclip", Default = false })
+local noclipEnabled = false
+
+local function toggleNoclip(state)
+    noclipEnabled = state
+    while noclipEnabled do
+        local character = game.Players.LocalPlayer.Character
+        if character then
+            for _, part in pairs(character:GetChildren()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+        end
+        task.wait()
+    end
+end
+
+NoclipToggle:OnChanged(toggleNoclip)
+
+local PlayersService = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Player = PlayersService.LocalPlayer
+local GameWorkspace = game:GetService("Workspace")
+
+local function validateCharacter()
+    return Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+end
+
+local function checkCoinAppearance(coin)
+    local visual = coin:FindFirstChild("CoinVisual")
+    return visual and visual.Transparency == 0
+end
+
+local function locateClosestCoin()
+    local closest, minDistance = nil, math.huge
+    for _, coin in ipairs(GameWorkspace:GetDescendants()) do
+        if coin.Name == "Coin_Server" and coin:IsA("Part") and checkCoinAppearance(coin) then 
+            local distance = (coin.Position - Player.Character.HumanoidRootPart.Position).Magnitude
+            if distance < minDistance then
+                closest, minDistance = coin, distance
+            end
+        end
+    end
+    return closest
+end
+
+local function warpToCoin(coin)
+    if not validateCharacter() then return end
+    Player.Character.HumanoidRootPart.CFrame = coin.CFrame
+end
+
+local function navigateToCoin(coin)
+    if not validateCharacter() then return end
+    local root = Player.Character.HumanoidRootPart
+    local gap = (coin.Position - root.Position).Magnitude
+
+    if gap > 250 then
+        warpToCoin(coin)
+        return
+    end
+
+    if not checkCoinAppearance(coin) then
+        return
+    end
+
+    local direction = (coin.Position - root.Position).unit
+    if gap > 0 then
+        root.CFrame = CFrame.new(root.Position, coin.Position)
+        root.CFrame = root.CFrame + direction * _G.MoveSpeed * RunService.Heartbeat:Wait()
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if not validateCharacter() then return end
+
+    local activeCoin = locateClosestCoin()
+    if activeCoin then
+        navigateToCoin(activeCoin)
+    end
+end)
+
+-- Применяем изменения в скорости прыжка
+local function applyJumpSpeed()
+    local character = Player.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.JumpHeight = _G.JumpHeight
+        end
+    end
+end
+
+Player.CharacterAdded:Connect(function()
+    applyJumpSpeed()
+end)
+
+-- Устанавливаем начальные значения
+applyJumpSpeed()
