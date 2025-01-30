@@ -192,7 +192,7 @@ Sections.Updates:AddParagraph({
     Content = "Stay tuned for future updates and features!"
 })
 
-local NoClip = Tabs.Config:AddToggle("NoClip", {Title = "NoClip", Default = true })
+local NoClip = Tabs.Configuration:AddToggle("NoClip", {Title = "NoClip", Default = true })
 
     NoClip:OnChanged(function()
         print("Toggle changed:", Options.Toggle.Value)
