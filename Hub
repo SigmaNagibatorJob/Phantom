@@ -191,29 +191,3 @@ Sections.Updates:AddParagraph({
     Title = "Coming Soon",
     Content = "Stay tuned for future updates and features!"
 })
-
-local NoClip = Tabs.Configuration:AddToggle("NoClip", {Title = "NoClip", Default = true })
-
-    NoClip:OnChanged(function()
-        print("Toggle changed:", Options.Toggle.Value)
-    end)
-
-    Options.MyToggle:SetValue(false)
-
-local RunService = game:GetService("RunService")
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-
--- Функция для отключения столкновений
-local function noClip()
-    for _, part in pairs(character:GetDescendants()) do
-        if part:IsA("BasePart") and part.CanCollide then
-            part.CanCollide = false
-        end
-    end
-end
-
--- Включение no-clip в цикле
-RunService.Stepped:Connect(function()
-    noClip()
-end)
