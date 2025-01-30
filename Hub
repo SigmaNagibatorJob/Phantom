@@ -380,3 +380,43 @@ Player.CharacterAdded:Connect(function()
 end)
 -- Устанавливаем начальные значения
 applyJumpSpeed()
+
+-- Слайдер для скорости движения
+local SpeedSlider = Tabs.Config:AddSlider("MoveSpeedSlider", {
+    Title = "Movement Speed",  -- Название слайдера
+    Description = "Change your movement speed",  -- Описание слайдера
+    Default = 16,  -- Начальная скорость
+    Min = 1,  -- Минимальное значение
+    Max = 100,  -- Максимальное значение
+    Rounding = 1,  -- Округление
+    Callback = function(Value)
+        print("Movement speed changed to:", Value)  -- Выводим в консоль
+        game.Players.LocalPlayer.Character:WaitForChild("Humanoid").WalkSpeed = Value  -- Применяем значение скорости
+    end
+})
+
+SpeedSlider:OnChanged(function(Value)
+    print("Slider changed:", Value)  -- Логируем изменение слайдера
+end)
+
+SpeedSlider:SetValue(16)  -- Устанавливаем начальное значение
+
+-- Слайдер для высоты прыжка
+local JumpSlider = Tabs.Main:AddSlider("JumpHeightSlider", {
+    Title = "Jump Height",  -- Название слайдера
+    Description = "Change your jump height",  -- Описание слайдера
+    Default = 50,  -- Начальная высота прыжка
+    Min = 10,  -- Минимальное значение
+    Max = 200,  -- Максимальное значение
+    Rounding = 1,  -- Округление
+    Callback = function(Value)
+        print("Jump height changed to:", Value)  -- Выводим в консоль
+        game.Players.LocalPlayer.Character:WaitForChild("Humanoid").JumpHeight = Value  -- Применяем значение высоты прыжка
+    end
+})
+
+JumpSlider:OnChanged(function(Value)
+    print("Slider changed:", Value)  -- Логируем изменение слайдера
+end)
+
+JumpSlider:SetValue(50)  -- Устанавливаем начальное значение
