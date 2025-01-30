@@ -31,7 +31,7 @@ local MainWindow = FluentUI:CreateWindow({
     Size = UDim2.fromOffset(600, 300),
     Acrylic = false, 
     Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftAlt 
+    MinimizeKey = Enum.KeyCode.LeftControl 
 })
 
 local Sections = {
