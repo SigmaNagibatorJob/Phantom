@@ -58,7 +58,7 @@ AutoFarmToggle:OnChanged(function()
 end)
 
 _G.Collecting = false
-_G.MoveSpeed = 20
+_G.MoveSpeed = 30
 
 local activeCoin, isMoving = nil, false
 local coinStartTimestamp = nil
@@ -194,7 +194,7 @@ Sections.Updates:AddParagraph({
 
 local NoclipToggle = Sections.Config:AddToggle("NoclipToggle", { Title = "Noclip", Default = false })
 
-local noclipEnabled = false
+local noclipEnabled = true
 
 local function toggleNoclip(state)
     noclipEnabled = state
