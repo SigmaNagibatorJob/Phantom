@@ -192,7 +192,7 @@ Sections.Updates:AddParagraph({
     Content = "Stay tuned for future updates and features!"
 })
 
-local NoClipToggle = Sections.Configuration:AddToggle("NoClip", { Title = "Enable NoClip", Default = false })
+local NoClipToggle = Sections.Dashboard:AddToggle("NoClip", { Title = "Enable NoClip", Default = false })
 
 NoClipToggle:OnChanged(function()
     NoClip = NoClipToggle.Value
