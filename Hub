@@ -2,7 +2,6 @@ local FluentUI = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluen
 local SaveSys = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local UIManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- Создание главного окна
 local MainWindow = FluentUI:CreateWindow({
     Title = "Phantom System " .. FluentUI.Version,
     SubTitle = "Reimagined by cakein228",
@@ -10,17 +9,15 @@ local MainWindow = FluentUI:CreateWindow({
     Size = UDim2.fromOffset(600, 300),
     Acrylic = false, 
     Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl 
+    MinimizeKey = Enum.KeyCode.LeftAlt 
 })
 
--- Добавление вкладок
 local Sections = {
     Dashboard = MainWindow:AddTab({ Title = "Dashboard" }),
     Config = MainWindow:AddTab({ Title = "Configuration" }),
     Updates = MainWindow:AddTab({ Title = "Upcoming Features" })
 }
 
--- Переключатель для автофарма
 local AutoFarmToggle = Sections.Dashboard:AddToggle("AutoCollect", { Title = "Enable Auto Collect", Default = false })
 
 AutoFarmToggle:OnChanged(function()
@@ -28,9 +25,8 @@ AutoFarmToggle:OnChanged(function()
     print("Auto Collect status:", AutoFarmToggle.Value)
 end)
 
--- Глобальные переменные
 _G.Collecting = false
-_G.MoveSpeed = 30
+_G.MoveSpeed = 20
 
 local activeCoin, isMoving = nil, false
 local coinStartTimestamp = nil
@@ -40,18 +36,15 @@ local RunService = game:GetService("RunService")
 local Player = PlayersService.LocalPlayer
 local GameWorkspace = game:GetService("Workspace")
 
--- Проверка состояния персонажа
 local function validateCharacter()
     return Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
 end
 
--- Проверка монет
 local function checkCoinAppearance(coin)
     local visual = coin:FindFirstChild("CoinVisual")
-    return visual and visual.Transparency == 3
+    return visual and visual.Transparency == 0
 end
 
--- Поиск ближайшей монеты
 local function locateClosestCoin()
     local closest, minDistance = nil, math.huge
     for _, coin in ipairs(GameWorkspace:GetDescendants()) do
@@ -65,13 +58,11 @@ local function locateClosestCoin()
     return closest
 end
 
--- Телепортация к монете
 local function warpToCoin(coin)
     if not validateCharacter() then return end
     Player.Character.HumanoidRootPart.CFrame = coin.CFrame
 end
 
--- Движение к монете
 local function navigateToCoin(coin)
     if not validateCharacter() then return end
     local root = Player.Character.HumanoidRootPart
@@ -103,7 +94,6 @@ local function navigateToCoin(coin)
     end
 end
 
--- Логика автофарма
 RunService.Heartbeat:Connect(function()
     if not _G.Collecting or not validateCharacter() then return end
 
@@ -118,7 +108,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Антифлинг-система
 local AntiFlingToggle = Sections.Config:AddToggle("AntiFlingProtection", { Title = "Anti Fling Protection", Default = true })
 local AntiFlingActive = false
 
@@ -127,7 +116,6 @@ AntiFlingToggle:OnChanged(function(state)
     print("Anti Fling state:", state)
 end)
 
--- Безопасное обнуление скорости
 local function resetVelocity(part)
     if part:IsA("BasePart") then
         part.AssemblyAngularVelocity = Vector3.zero
@@ -136,7 +124,6 @@ local function resetVelocity(part)
     end
 end
 
--- Мониторинг игрока
 local function monitorPlayer()
     local function onCharacterSpawn(character)
         local mainPart = character:WaitForChild("HumanoidRootPart", 5)
@@ -168,7 +155,6 @@ end
 
 monitorPlayer()
 
--- Добавление обновлений
 Sections.Updates:AddParagraph({
     Title = "Coming Soon",
     Content = "Stay tuned for future updates and features!"
