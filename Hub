@@ -1,28 +1,18 @@
+-- Создание кнопки в вашем GUI
 local ScreenGui = Instance.new("ScreenGui")
-local Button = Instance.new("ImageButton") -- Используем ImageButton
+local Button = Instance.new("TextButton")
 
 -- Настройка ScreenGui
 ScreenGui.Parent = game.CoreGui
 
 -- Настройка кнопки
 Button.Parent = ScreenGui
-Button.Size = UDim2.new(0, 50, 0, 50) -- Размер кнопки
-Button.Position = UDim2.new(0, 10, 0, -10) -- Позиция кнопки
-Button.BackgroundColor3 = Color3.new(1, 1, 1) -- Цвет фона кнопки
+Button.Text = ""
+Button.Size = UDim2.new(0, 50, 0, 50)
+Button.Position = UDim2.new(0, 10, 0, 10)
+Button.BackgroundColor3 = Color3.new(1, 1, 1)
 
--- ID изображения
-local imageId = "rbxassetid://127815828886309"
-Button.Image = imageId
-
--- Настройка изображения
-Button.ScaleType = Enum.ScaleType.Stretch -- Растягивание
-Button.ImageTransparency = 0 -- Отключаем прозрачность
-
--- Предзагрузка изображения
-local ContentProvider = game:GetService("ContentProvider")
-ContentProvider:PreloadAsync({imageId})
-
--- Функция нажатия
+-- Функция нажатияñ
 Button.MouseButton1Click:Connect(function()
     local VirtualInputManager = game:GetService("VirtualInputManager")
     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, nil) -- Нажатие
@@ -45,99 +35,111 @@ local MainWindow = FluentUI:CreateWindow({
 })
 
 local Sections = {
-    Dashboard = MainWindow:AddTab({ Title = "Dashboard" }),
+    Farm = MainWindow:AddTab({ Title = "Farm" }),
     Config = MainWindow:AddTab({ Title = "Configuration" }),
     Updates = MainWindow:AddTab({ Title = "Upcoming Features" })
 }
 
-local AutoFarmToggle = Sections.Dashboard:AddToggle("AutoCollect", { Title = "Enable Auto Collect", Default = false })
-
-AutoFarmToggle:OnChanged(function()
-    _G.Collecting = AutoFarmToggle.Value
-    print("Auto Collect status:", AutoFarmToggle.Value)
-end)
-
-_G.Collecting = false
-_G.MoveSpeed = 30
-
-local activeCoin, isMoving = nil, false
-local coinStartTimestamp = nil
-
-local PlayersService = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Player = PlayersService.LocalPlayer
-local GameWorkspace = game:GetService("Workspace")
+local AutoFarm = {
+    Collecting = false,
+    MoveSpeed = 20
+}
 
 local function validateCharacter()
     return Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
 end
 
-local function checkCoinAppearance(coin)
-    local visual = coin:FindFirstChild("CoinVisual")
-    return visual and visual.Transparency == 0
+local function isCoinValid(coin)
+    return coin:IsA("BasePart") and coin.Name:lower():find("coin") and coin.Transparency < 1 and coin.CanTouch
 end
 
-local function locateClosestCoin()
-    local closest, minDistance = nil, math.huge
-    for _, coin in ipairs(GameWorkspace:GetDescendants()) do
-        if coin.Name == "Coin_Server" and coin:IsA("Part") and checkCoinAppearance(coin) then 
-            local distance = (coin.Position - Player.Character.HumanoidRootPart.Position).Magnitude
+local function findClosestCoin()
+    local closestCoin, minDistance = nil, math.huge
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if isCoinValid(obj) then
+            local distance = (obj.Position - Player.Character.HumanoidRootPart.Position).Magnitude
             if distance < minDistance then
-                closest, minDistance = coin, distance
+                closestCoin, minDistance = obj, distance
             end
         end
     end
-    return closest
+    return closestCoin
 end
 
-local function warpToCoin(coin)
-    if not validateCharacter() then return end
-    Player.Character.HumanoidRootPart.CFrame = coin.CFrame
+local function stabilizeCamera()
+    Camera.CameraSubject = Player.Character:FindFirstChild("Humanoid") or Player.Character
 end
 
-local function navigateToCoin(coin)
+local function moveToCoin(coin)
     if not validateCharacter() then return end
     local root = Player.Character.HumanoidRootPart
-    local gap = (coin.Position - root.Position).Magnitude
+    local distance = (coin.Position - root.Position).Magnitude
 
-    if gap > 250 then
-        warpToCoin(coin)
-        isMoving = false
-        return
-    end
+    stabilizeCamera()
+    task.wait(0.05)
 
-    if not checkCoinAppearance(coin) then
-        isMoving = false
-        return
-    end
-
-    if os.clock() - coinStartTimestamp > 10 then
-        warpToCoin(coin)
-        isMoving = false
-        return
-    end
-
-    local direction = (coin.Position - root.Position).unit
-    if gap > 0 then
-        root.CFrame = CFrame.new(root.Position, coin.Position)
-        root.CFrame = root.CFrame + direction * _G.MoveSpeed * RunService.Heartbeat:Wait()
+    if distance > 200 then
+        root.CFrame = CFrame.new(coin.Position) -- Убрано Vector3.new(0, 3, 0)
+        stabilizeCamera()
     else
-        isMoving = false
+        local tweenInfo = TweenInfo.new(distance / AutoFarm.MoveSpeed, Enum.EasingStyle.Linear)
+        local tween = TweenService:Create(root, tweenInfo, {CFrame = coin.CFrame}) -- Убрано Vector3.new(0, 3, 0)
+        tween:Play()
+        tween.Completed:Wait()
+        stabilizeCamera()
     end
+end
+
+local function noClip()
+    RunService.Stepped:Connect(function()
+        if AutoFarm.Collecting and validateCharacter() then
+            for _, part in pairs(Player.Character:GetChildren()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
 end
 
 RunService.Heartbeat:Connect(function()
-    if not _G.Collecting or not validateCharacter() then return end
-
-    if not isMoving then
-        activeCoin = locateClosestCoin()
-        if activeCoin then
-            isMoving = true
-            coinStartTimestamp = os.clock()
-        end
-    elseif activeCoin then
-        navigateToCoin(activeCoin)
+    if not AutoFarm.Collecting or not validateCharacter() then return end
+    local coin = findClosestCoin()
+    if coin then
+        moveToCoin(coin)
     end
+end)
+
+local function preventFalling()
+    RunService.Heartbeat:Connect(function()
+        if AutoFarm.Collecting and validateCharacter() then
+            local root = Player.Character.HumanoidRootPart
+            if root.Velocity.Y < -1 then
+                root.Velocity = Vector3.new(root.Velocity.X, 0, root.Velocity.Z)
+                root.CFrame = root.CFrame + Vector3.new(0, 0.5, 0)
+            end
+        end
+    end)
+end
+
+preventFalling()
+
+-- UI кнопки
+local ToggleAutoFarm = Sections.Farm:AddToggle("AutoFarm", { Title = "Auto Farm", Default = false })
+ToggleAutoFarm:OnChanged(function()
+    AutoFarm.Collecting = ToggleAutoFarm.Value
+end)
+
+local SliderSpeed = Sections.Farm:AddSlider("MoveSpeed", {
+    Title = "Move Speed",
+    Default = 20,
+    Min = 10,
+    Max = 50,
+    Rounding = 0,
+    Suffix = " speed"
+})
+SliderSpeed:OnChanged(function(value)
+    AutoFarm.MoveSpeed = value
 end)
 
 local AntiFlingToggle = Sections.Config:AddToggle("AntiFlingProtection", { Title = "Anti Fling Protection", Default = true })
@@ -148,35 +150,40 @@ AntiFlingToggle:OnChanged(function(state)
     print("Anti Fling state:", state)
 end)
 
-local function resetVelocity(part)
-    if part:IsA("BasePart") then
-        part.AssemblyAngularVelocity = Vector3.zero
-        part.AssemblyLinearVelocity = Vector3.zero
-        part.CanCollide = false
+local function disableAntiCheat()
+    local success, message = pcall(function()
+        local mt = getrawmetatable(game)
+        setreadonly(mt, false)
+
+        local oldNamecall = mt.__namecall
+        mt.__namecall = newcclosure(function(self, ...)
+            local args = {...}
+            local method = getnamecallmethod()
+
+            if method == "FireServer" and tostring(self) == "AntiCheatRemote" then
+                return
+            end
+
+            return oldNamecall(self, unpack(args))
+        end)
+    end)
+
+    if not success then
+        warn("Не удалось отключить античит:", message)
+    else
+        print("Античит отключен успешно!")
     end
 end
 
+disableAntiCheat()
+
 local function monitorPlayer()
     local function onCharacterSpawn(character)
-        local mainPart = character:WaitForChild("HumanoidRootPart", 5)
-        local lastSafePosition = nil
-
-        RunService.Heartbeat:Connect(function()
-            if not AntiFlingActive or not mainPart then return end
-
-            if mainPart.AssemblyLinearVelocity.Magnitude > 200 then
-                resetVelocity(mainPart)
-                if lastSafePosition then
-                    mainPart.CFrame = lastSafePosition
-                end
-                game.StarterGui:SetCore("ChatMakeSystemMessage", {
-                    Text = "Unusual movement detected! Stabilizing...",
-                    Color = Color3.fromRGB(255, 50, 50),
-                })
-            else
-                lastSafePosition = mainPart.CFrame
-            end
-        end)
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+        end
     end
 
     Player.CharacterAdded:Connect(onCharacterSpawn)
@@ -187,179 +194,4 @@ end
 
 monitorPlayer()
 
-Sections.Updates:AddParagraph({
-    Title = "Coming Soon",
-    Content = "Stay tuned for future updates and features!"
-})
-
-local NoclipToggle = Sections.Config:AddToggle("NoclipToggle", { Title = "Noclip", Default = false })
-
-local noclipEnabled = true
-
-local function toggleNoclip(state)
-    noclipEnabled = state
-    while noclipEnabled do
-        local character = game.Players.LocalPlayer.Character
-        if character then
-            for _, part in pairs(character:GetChildren()) do
-                if part:IsA("BasePart") and part.CanCollide then
-                    part.CanCollide = false
-                end
-            end
-        end
-        task.wait()
-    end
-end
-
-NoclipToggle:OnChanged(toggleNoclip)
-
-local SpeedSlider = Sections.Config:AddSlider("MoveSpeed", {
-    Title = "Movement Speed",
-    Min = 16,
-    Max = 100,
-    Default = 20,
-    Callback = function(value)
-        _G.MoveSpeed = value
-        print("Movement Speed set to:", value)
-    end
-})
-
-local JumpSlider = Sections.Config:AddSlider("JumpHeight", {
-    Title = "Jump Height",
-    Min = 50,
-    Max = 200,
-    Default = 100,
-    Callback = function(value)
-        _G.JumpHeight = value
-        print("Jump Height set to:", value)
-    end
-})
-
-local NoclipToggle = Sections.Config:AddToggle("NoclipToggle", { Title = "Noclip", Default = false })
-local noclipEnabled = false
-
-local function toggleNoclip(state)
-    noclipEnabled = state
-    while noclipEnabled do
-        local character = game.Players.LocalPlayer.Character
-        if character then
-            for _, part in pairs(character:GetChildren()) do
-                if part:IsA("BasePart") and part.CanCollide then
-                    part.CanCollide = false
-                end
-            end
-        end
-        task.wait()
-    end
-end
-
-NoclipToggle:OnChanged(toggleNoclip)
-
-local SpeedSlider = Sections.Config:AddSlider("MoveSpeed", {
-    Title = "Movement Speed",
-    Min = 16,
-    Max = 100,
-    Default = 20,
-    Callback = function(value)
-        _G.MoveSpeed = value
-        print("Movement Speed set to:", value)
-    end
-})
-
-local JumpSlider = Sections.Config:AddSlider("JumpHeight", {
-    Title = "Jump Height",
-    Min = 50,
-    Max = 200,
-    Default = 100,
-    Callback = function(value)
-        _G.JumpHeight = value
-        print("Jump Height set to:", value)
-    end
-})
-
-local NoclipToggle = Sections.Config:AddToggle("NoclipToggle", {
-    Title = "Noclip", 
-    Default = false,
-    Callback = function(state)
-        toggleNoclip(state)
-    end
-})
-
-local noclipEnabled = false
-
-local function toggleNoclip(state)
-    noclipEnabled = state
-    while noclipEnabled do
-        local character = game.Players.LocalPlayer.Character
-        if character then
-            for _, part in pairs(character:GetChildren()) do
-                if part:IsA("BasePart") and part.CanCollide then
-                    part.CanCollide = false
-                end
-            end
-        end
-        task.wait()
-    end
-end
-
-local PlayersService = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Player = PlayersService.LocalPlayer
-local GameWorkspace = game:GetService("Workspace")
-
-local function validateCharacter()
-    return Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
-end
-
-local function checkCoinAppearance(coin)
-    local visual = coin:FindFirstChild("CoinVisual")
-    return visual and visual.Transparency == 0
-end
-
-local function locateClosestCoin()
-    local closest, minDistance = nil, math.huge
-    for _, coin in ipairs(GameWorkspace:GetDescendants()) do
-        if coin.Name == "Coin_Server" and coin:IsA("Part") and checkCoinAppearance(coin) then 
-            local distance = (coin.Position - Player.Character.HumanoidRootPart.Position).Magnitude
-            if distance < minDistance then
-                closest, minDistance = coin, distance
-            end
-        end
-    end
-    return closest
-end
-
-local function warpToCoin(coin)
-    if not validateCharacter() then return end
-    Player.Character.HumanoidRootPart.CFrame = coin.CFrame
-end
-
-local function navigateToCoin(coin)
-    if not validateCharacter() then return end
-    local root = Player.Character.HumanoidRootPart
-    local gap = (coin.Position - root.Position).Magnitude
-
-    if gap > 250 then
-        warpToCoin(coin)
-        return
-    end
-
-    if not checkCoinAppearance(coin) then
-        return
-    end
-
-    local direction = (coin.Position - root.Position).unit
-    if gap > 0 then
-        root.CFrame = CFrame.new(root.Position, coin.Position)
-        root.CFrame = root.CFrame + direction * _G.MoveSpeed * RunService.Heartbeat:Wait()
-    end
-end
-
-RunService.Heartbeat:Connect(function()
-    if not validateCharacter() then return end
-
-    local activeCoin = locateClosestCoin()
-    if activeCoin then
-        navigateToCoin(activeCoin)
-    end
-end)
+noClip()
