@@ -1,29 +1,3 @@
-local ScreenGui = Instance.new("ScreenGui")
-local Button = Instance.new("TextButton")
-
--- Настройка ScreenGui
-ScreenGui.Parent = game.CoreGui
-
--- Настройка кнопки
-Button.Parent = ScreenGui
-Button.Text = ""
-Button.Size = UDim2.new(0, 50, 0, 50)
-Button.Position = UDim2.new(0, 10, 0, 10)
-Button.BackgroundColor3 = Color3.new(1, 1, 1)
-
--- Функция нажатия
-Button.MouseButton1Click:Connect(function()
-    local VirtualInputManager = game:GetService("VirtualInputManager")
-    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, nil) -- Нажатие
-    task.wait(0.1) -- Задержка
-    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, nil) -- Отпускание
-end)
-
--- Получение сервисов
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local Players = game:GetService("Players")
-
 local FluentUI = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local SaveSys = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local UIManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
@@ -203,5 +177,43 @@ local function monitorPlayer()
 end
 
 monitorPlayer()
+
+-- == АНТИ-КИК ==
+local mt = getrawmetatable(game)
+setreadonly(mt, false)
+
+local oldNamecall = mt.__namecall
+mt.__namecall = newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    if method == "Kick" and self == Player then
+        warn("Блокировка кика!")
+        return nil
+    end
+    return oldNamecall(self, ...)
+end)
+
+setreadonly(mt, true)
+
+-- == АНТИ-ФЛИНГ ==
+local function preventFling()
+    RunService.Heartbeat:Connect(function()
+        if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then return end
+        local root = Player.Character.HumanoidRootPart
+
+        -- Ограничение максимальной скорости
+        if root.AssemblyLinearVelocity.Magnitude > 50 then
+            root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            warn("Фикс флинга: сброшена скорость!")
+        end
+
+        -- Фиксация позиции, если вдруг игрока бросает в небо
+        if root.Position.Y > 1000 then
+            root.CFrame = CFrame.new(Vector3.new(root.Position.X, 10, root.Position.Z))
+            warn("Фикс флинга: возврат на землю!")
+        end
+    end)
+end
+
+preventFling()
 
 noClip()
